@@ -1,0 +1,111 @@
+import os
+import aiosqlite
+from config import DB_PATH
+
+
+async def init_db():
+    dir_name = os.path.dirname(DB_PATH)
+    if dir_name:
+        os.makedirs(dir_name, exist_ok=True)
+
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS habits (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL UNIQUE,
+                emoji TEXT DEFAULT '✅',
+                active INTEGER DEFAULT 1,
+                created_at DATE DEFAULT CURRENT_DATE
+            )
+        """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS daily_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                habit_id INTEGER REFERENCES habits(id),
+                date DATE NOT NULL,
+                done INTEGER DEFAULT 0,
+                UNIQUE(habit_id, date)
+            )
+        """)
+        await db.commit()
+
+
+async def get_habits() -> list[dict]:
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute(
+            "SELECT id, name, emoji FROM habits WHERE active = 1 ORDER BY id"
+        ) as cursor:
+            rows = await cursor.fetchall()
+    return [dict(row) for row in rows]
+
+
+async def add_habit(name: str, emoji: str = "✅") -> bool:
+    try:
+        async with aiosqlite.connect(DB_PATH) as db:
+            await db.execute(
+                "INSERT INTO habits (name, emoji) VALUES (?, ?)", (name, emoji)
+            )
+            await db.commit()
+        return True
+    except aiosqlite.IntegrityError:
+        return False
+
+
+async def delete_habit(habit_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "UPDATE habits SET active = 0 WHERE id = ?", (habit_id,)
+        )
+        await db.commit()
+
+
+async def toggle_log(habit_id: int, date: str) -> bool:
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute(
+            "SELECT done FROM daily_logs WHERE habit_id = ? AND date = ?",
+            (habit_id, date),
+        ) as cursor:
+            row = await cursor.fetchone()
+
+        if row is None:
+            await db.execute(
+                "INSERT INTO daily_logs (habit_id, date, done) VALUES (?, ?, 1)",
+                (habit_id, date),
+            )
+            new_done = True
+        else:
+            new_done = not bool(row[0])
+            await db.execute(
+                "UPDATE daily_logs SET done = ? WHERE habit_id = ? AND date = ?",
+                (int(new_done), habit_id, date),
+            )
+        await db.commit()
+    return new_done
+
+
+async def get_today_logs(date: str) -> dict[int, bool]:
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute(
+            "SELECT habit_id, done FROM daily_logs WHERE date = ?", (date,)
+        ) as cursor:
+            rows = await cursor.fetchall()
+    return {row[0]: bool(row[1]) for row in rows}
+
+
+async def get_logs_range(start: str, end: str) -> list[dict]:
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute(
+            """
+            SELECT h.id, h.name, h.emoji, dl.date, dl.done
+            FROM habits h
+            LEFT JOIN daily_logs dl
+                ON h.id = dl.habit_id AND dl.date BETWEEN ? AND ?
+            WHERE h.active = 1
+            ORDER BY h.id, dl.date
+            """,
+            (start, end),
+        ) as cursor:
+            rows = await cursor.fetchall()
+    return [dict(row) for row in rows]
