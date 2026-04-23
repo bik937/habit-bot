@@ -1,5 +1,5 @@
 from aiogram import Router, F
-from aiogram.filters import Command, or_f
+from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup
@@ -22,7 +22,8 @@ def build_manage_keyboard() -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
-@router.message(or_f(Command("manage"), F.text == "⚙️ Manage"))
+@router.message(Command("manage"))
+@router.message(F.text == "⚙️ Manage")
 async def cmd_manage(message: Message):
     await message.answer(
         "⚙️ *Управление привычками*\n\nЧто хочешь сделать?",
