@@ -17,8 +17,31 @@ def build_manage_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(text="➕ Добавить привычку", callback_data="habit_add")
     builder.button(text="🗑 Удалить привычку", callback_data="habit_delete_list")
+    builder.button(text="🔀 Изменить порядок", callback_data="habit_reorder")
     builder.button(text="📋 Список привычек", callback_data="habit_list")
     builder.adjust(1)
+    return builder.as_markup()
+
+
+def build_reorder_keyboard(habits: list[dict]) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    for i, h in enumerate(habits):
+        is_first = i == 0
+        is_last = i == len(habits) - 1
+        name = h["name"][:14] + "…" if len(h["name"]) > 15 else h["name"]
+
+        builder.button(
+            text="  " if is_first else "⬆️",
+            callback_data="noop" if is_first else f"reorder_up:{h['id']}",
+        )
+        builder.button(text=name, callback_data="noop")
+        builder.button(
+            text="  " if is_last else "⬇️",
+            callback_data="noop" if is_last else f"reorder_down:{h['id']}",
+        )
+
+    builder.button(text="← Назад", callback_data="habit_back")
+    builder.adjust(3)
     return builder.as_markup()
 
 
@@ -106,6 +129,53 @@ async def callback_delete_habit(call: CallbackQuery):
     name = habit["name"] if habit else "Привычка"
 
     await call.message.edit_text(f"🗑 *{name}* удалена.", parse_mode="Markdown")
+    await call.answer()
+
+
+@router.callback_query(F.data == "habit_reorder")
+async def callback_reorder(call: CallbackQuery):
+    habits = await db.get_habits()
+    if not habits:
+        await call.message.answer("Нет привычек для сортировки.")
+        await call.answer()
+        return
+
+    await call.message.edit_text(
+        "🔀 *Порядок привычек*\n\nНажми ⬆️ или ⬇️ чтобы переместить:",
+        reply_markup=build_reorder_keyboard(habits),
+        parse_mode="Markdown",
+    )
+    await call.answer()
+
+
+@router.callback_query(F.data.startswith("reorder_up:"))
+async def callback_reorder_up(call: CallbackQuery):
+    habit_id = int(call.data.split(":")[1])
+    await db.move_habit(habit_id, "up")
+    habits = await db.get_habits()
+    await call.message.edit_text(
+        "🔀 *Порядок привычек*\n\nНажми ⬆️ или ⬇️ чтобы переместить:",
+        reply_markup=build_reorder_keyboard(habits),
+        parse_mode="Markdown",
+    )
+    await call.answer()
+
+
+@router.callback_query(F.data.startswith("reorder_down:"))
+async def callback_reorder_down(call: CallbackQuery):
+    habit_id = int(call.data.split(":")[1])
+    await db.move_habit(habit_id, "down")
+    habits = await db.get_habits()
+    await call.message.edit_text(
+        "🔀 *Порядок привычек*\n\nНажми ⬆️ или ⬇️ чтобы переместить:",
+        reply_markup=build_reorder_keyboard(habits),
+        parse_mode="Markdown",
+    )
+    await call.answer()
+
+
+@router.callback_query(F.data == "noop")
+async def callback_noop(call: CallbackQuery):
     await call.answer()
 
 

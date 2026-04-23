@@ -15,6 +15,7 @@ async def init_db():
                 name TEXT NOT NULL UNIQUE,
                 emoji TEXT DEFAULT '✅',
                 active INTEGER DEFAULT 1,
+                position INTEGER DEFAULT 0,
                 created_at DATE DEFAULT CURRENT_DATE
             )
         """)
@@ -27,6 +28,13 @@ async def init_db():
                 UNIQUE(habit_id, date)
             )
         """)
+        # Миграция: добавить колонку position если её нет
+        try:
+            await db.execute("ALTER TABLE habits ADD COLUMN position INTEGER DEFAULT 0")
+        except Exception:
+            pass
+        # Инициализировать position для привычек у которых он = 0
+        await db.execute("UPDATE habits SET position = id WHERE position = 0")
         await db.commit()
 
 
@@ -34,7 +42,7 @@ async def get_habits() -> list[dict]:
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
         async with db.execute(
-            "SELECT id, name, emoji FROM habits WHERE active = 1 ORDER BY id"
+            "SELECT id, name, emoji FROM habits WHERE active = 1 ORDER BY position ASC, id ASC"
         ) as cursor:
             rows = await cursor.fetchall()
     return [dict(row) for row in rows]
@@ -43,13 +51,45 @@ async def get_habits() -> list[dict]:
 async def add_habit(name: str, emoji: str = "✅") -> bool:
     try:
         async with aiosqlite.connect(DB_PATH) as db:
+            async with db.execute(
+                "SELECT COALESCE(MAX(position), 0) FROM habits WHERE active = 1"
+            ) as cursor:
+                row = await cursor.fetchone()
+                next_pos = (row[0] if row else 0) + 1
             await db.execute(
-                "INSERT INTO habits (name, emoji) VALUES (?, ?)", (name, emoji)
+                "INSERT INTO habits (name, emoji, position) VALUES (?, ?, ?)",
+                (name, emoji, next_pos),
             )
             await db.commit()
         return True
     except aiosqlite.IntegrityError:
         return False
+
+
+async def move_habit(habit_id: int, direction: str):
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute(
+            "SELECT id, position FROM habits WHERE active = 1 ORDER BY position ASC, id ASC"
+        ) as cursor:
+            habits = [(r[0], r[1]) for r in await cursor.fetchall()]
+
+        idx = next((i for i, (hid, _) in enumerate(habits) if hid == habit_id), None)
+        if idx is None:
+            return
+
+        if direction == "up" and idx > 0:
+            other_idx = idx - 1
+        elif direction == "down" and idx < len(habits) - 1:
+            other_idx = idx + 1
+        else:
+            return
+
+        curr_id, curr_pos = habits[idx]
+        other_id, other_pos = habits[other_idx]
+
+        await db.execute("UPDATE habits SET position = ? WHERE id = ?", (other_pos, curr_id))
+        await db.execute("UPDATE habits SET position = ? WHERE id = ?", (curr_pos, other_id))
+        await db.commit()
 
 
 async def delete_habit(habit_id: int):
