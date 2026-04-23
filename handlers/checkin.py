@@ -1,5 +1,5 @@
-from aiogram import Router
-from aiogram.filters import Command
+from aiogram import Router, F
+from aiogram.filters import Command, or_f
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from datetime import date
@@ -32,7 +32,7 @@ def checkin_text(habits: list[dict], logs: dict[int, bool], target_date: str) ->
     )
 
 
-@router.message(Command("checkin"))
+@router.message(or_f(Command("checkin"), F.text == "✅ Check In"))
 async def cmd_checkin(message: Message):
     today = str(date.today())
     habits = await db.get_habits()

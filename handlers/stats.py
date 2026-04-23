@@ -1,5 +1,5 @@
 from aiogram import Router, F
-from aiogram.filters import Command
+from aiogram.filters import Command, or_f
 from aiogram.types import Message, CallbackQuery, BufferedInputFile
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from datetime import date
@@ -9,7 +9,7 @@ import charts
 router = Router()
 
 
-@router.message(Command("today"))
+@router.message(or_f(Command("today"), F.text == "📋 Today"))
 async def cmd_today(message: Message):
     today = str(date.today())
     habits = await db.get_habits()
@@ -41,7 +41,7 @@ async def cmd_today(message: Message):
     await message.answer("\n".join(lines), parse_mode="Markdown")
 
 
-@router.message(Command("stats"))
+@router.message(or_f(Command("stats"), F.text == "📊 Stats"))
 async def cmd_stats(message: Message):
     builder = InlineKeyboardBuilder()
     builder.button(text="📅 7 дней", callback_data="stats:7")

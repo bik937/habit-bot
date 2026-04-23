@@ -25,31 +25,22 @@ dp.include_router(stats.router)
 
 
 main_keyboard = ReplyKeyboardMarkup(
-    keyboard=[[KeyboardButton(text="🏠 Старт")]],
+    keyboard=[
+        [KeyboardButton(text="⚙️ Manage"), KeyboardButton(text="✅ Check In")],
+        [KeyboardButton(text="📊 Stats"), KeyboardButton(text="📋 Today")],
+    ],
     resize_keyboard=True,
     persistent=True,
-)
-
-MENU_TEXT = (
-    "Что хочешь сделать?\n\n"
-    "⚙️ /manage — добавить или удалить привычки\n"
-    "✅ /checkin — отметить привычки за сегодня\n"
-    "📊 /stats — статистика и графики\n"
-    "📋 /today — сводка за сегодня"
 )
 
 
 @dp.message(Command("start"))
 async def cmd_start(message: Message):
     await message.answer(
-        "Ассаламу алейкум! Я твой личный трекер привычек.\n\n" + MENU_TEXT,
+        "Ассаламу алейкум! Я твой личный трекер привычек.\n\n"
+        "Используй кнопки внизу экрана 👇",
         reply_markup=main_keyboard,
     )
-
-
-@dp.message(F.text == "🏠 Старт")
-async def cmd_menu(message: Message):
-    await message.answer(MENU_TEXT, reply_markup=main_keyboard)
 
 
 async def main():
