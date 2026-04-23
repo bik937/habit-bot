@@ -92,6 +92,19 @@ async def move_habit(habit_id: int, direction: str):
         await db.commit()
 
 
+async def rename_habit(habit_id: int, new_name: str) -> bool:
+    try:
+        async with aiosqlite.connect(DB_PATH) as db:
+            await db.execute(
+                "UPDATE habits SET name = ? WHERE id = ? AND active = 1",
+                (new_name, habit_id),
+            )
+            await db.commit()
+        return True
+    except aiosqlite.IntegrityError:
+        return False
+
+
 async def delete_habit(habit_id: int):
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute(
