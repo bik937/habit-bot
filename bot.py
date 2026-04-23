@@ -1,10 +1,10 @@
 import asyncio
 import logging
 
-from aiogram import Bot, Dispatcher
+from aiogram import Bot, Dispatcher, F
 from aiogram.filters import Command
 from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.types import Message
+from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
 
 from config import BOT_TOKEN
 from database import init_db
@@ -24,17 +24,32 @@ dp.include_router(checkin.router)
 dp.include_router(stats.router)
 
 
+main_keyboard = ReplyKeyboardMarkup(
+    keyboard=[[KeyboardButton(text="🏠 Старт")]],
+    resize_keyboard=True,
+    persistent=True,
+)
+
+MENU_TEXT = (
+    "Что хочешь сделать?\n\n"
+    "⚙️ /manage — добавить или удалить привычки\n"
+    "✅ /checkin — отметить привычки за сегодня\n"
+    "📊 /stats — статистика и графики\n"
+    "📋 /today — сводка за сегодня"
+)
+
+
 @dp.message(Command("start"))
 async def cmd_start(message: Message):
     await message.answer(
-        "👋 Привет! Я твой личный трекер привычек.\n\n"
-        "Что умею:\n"
-        "⚙️ /manage — добавить или удалить привычки\n"
-        "✅ /checkin — отметить привычки за сегодня\n"
-        "📊 /stats — статистика и графики\n"
-        "📋 /today — сводка за сегодня\n\n"
-        "Начни с /manage — добавь первые привычки!"
+        "Ассаламу алейкум! Я твой личный трекер привычек.\n\n" + MENU_TEXT,
+        reply_markup=main_keyboard,
     )
+
+
+@dp.message(F.text == "🏠 Старт")
+async def cmd_menu(message: Message):
+    await message.answer(MENU_TEXT, reply_markup=main_keyboard)
 
 
 async def main():

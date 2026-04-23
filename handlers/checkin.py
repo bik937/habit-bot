@@ -19,7 +19,7 @@ def build_checkin_keyboard(
             text=f"{mark} {habit['name']}",
             callback_data=f"toggle:{habit['id']}:{target_date}",
         )
-    builder.adjust(2)
+    builder.adjust(1)
     return builder.as_markup()
 
 

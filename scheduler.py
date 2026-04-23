@@ -25,7 +25,7 @@ async def send_morning_reminder(bot: Bot):
             text=f"{mark} {habit['name']}",
             callback_data=f"toggle:{habit['id']}:{today}",
         )
-    builder.adjust(2)
+    builder.adjust(1)
 
     await bot.send_message(
         CHAT_ID,
@@ -65,7 +65,7 @@ async def send_evening_reminder(bot: Bot):
                 text=f"⬜ {h['name']}",
                 callback_data=f"toggle:{h['id']}:{today}",
             )
-        builder.adjust(2)
+        builder.adjust(1)
         keyboard = builder.as_markup()
     else:
         lines.append("\n🎉 Все привычки выполнены!")
