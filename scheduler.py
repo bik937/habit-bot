@@ -29,7 +29,7 @@ async def send_morning_reminder(bot: Bot):
 
     await bot.send_message(
         CHAT_ID,
-        f"☀️ *Доброе утро!*\n\n"
+        f"☀️ *Добрый день!*\n\n"
         f"Привычки на {today} — выполнено {done_count}/{len(habits)}.\n\n"
         f"Нажми чтобы отметить:",
         reply_markup=builder.as_markup(),
