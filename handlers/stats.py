@@ -20,24 +20,30 @@ async def cmd_today(message: Message):
         return
 
     logs = await db.get_today_logs(today)
-    done = [h for h in habits if logs.get(h["id"], False)]
-    missed = [h for h in habits if not logs.get(h["id"], False)]
+    done    = [h for h in habits if logs.get(h["id"], 0) == 1]
+    skipped = [h for h in habits if logs.get(h["id"], 0) == 2]
+    unmarked = [h for h in habits if logs.get(h["id"], 0) == 0]
     pct = round(len(done) / len(habits) * 100)
 
-    lines = [f"📋 *Сводка за {today}*\n", f"✅ Выполнено: {len(done)}/{len(habits)} ({pct}%)\n"]
+    lines = [f"📋 *Сводка за {today}*\n", f"Выполнено: {len(done)}/{len(habits)} ({pct}%)\n"]
 
     if done:
         lines.append("*Выполнено:*")
         for h in done:
             lines.append(f"  ✅ {h['name']}")
 
-    if missed:
-        lines.append("\n*Не выполнено:*")
-        for h in missed:
+    if skipped:
+        lines.append("\n*Не сделал:*")
+        for h in skipped:
             lines.append(f"  ❌ {h['name']}")
 
-    if not missed:
-        lines.append("\n🎉 Все привычки выполнены!")
+    if unmarked:
+        lines.append("\n*Не отмечено:*")
+        for h in unmarked:
+            lines.append(f"  ⬜ {h['name']}")
+
+    if not skipped and not unmarked:
+        lines.append("\n🎉 Все привычки отмечены!")
 
     await message.answer("\n".join(lines), parse_mode="Markdown")
 

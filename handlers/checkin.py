@@ -8,13 +8,16 @@ import database as db
 router = Router()
 
 
+MARKS = {0: "⬜", 1: "✅", 2: "❌"}
+
+
 def build_checkin_keyboard(
-    habits: list[dict], logs: dict[int, bool], target_date: str
+    habits: list[dict], logs: dict[int, int], target_date: str
 ) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     for habit in habits:
-        done = logs.get(habit["id"], False)
-        mark = "✅" if done else "⬜"
+        state = logs.get(habit["id"], 0)
+        mark = MARKS[state]
         builder.button(
             text=f"{mark} {habit['name']}",
             callback_data=f"toggle:{habit['id']}:{target_date}",
@@ -23,12 +26,12 @@ def build_checkin_keyboard(
     return builder.as_markup()
 
 
-def checkin_text(habits: list[dict], logs: dict[int, bool], target_date: str) -> str:
-    done_count = sum(1 for h in habits if logs.get(h["id"], False))
+def checkin_text(habits: list[dict], logs: dict[int, int], target_date: str) -> str:
+    done_count = sum(1 for h in habits if logs.get(h["id"], 0) == 1)
     return (
         f"📋 *Привычки на {target_date}*\n"
         f"Выполнено: {done_count}/{len(habits)}\n\n"
-        f"Нажми чтобы отметить:"
+        f"⬜ — не отмечено  ✅ — сделал  ❌ — не сделал"
     )
 
 

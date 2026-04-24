@@ -113,7 +113,8 @@ async def delete_habit(habit_id: int):
         await db.commit()
 
 
-async def toggle_log(habit_id: int, date: str) -> bool:
+async def toggle_log(habit_id: int, date: str) -> int:
+    """Цикл состояний: 0 (⬜) → 1 (✅) → 2 (❌) → 0"""
     async with aiosqlite.connect(DB_PATH) as db:
         async with db.execute(
             "SELECT done FROM daily_logs WHERE habit_id = ? AND date = ?",
@@ -122,28 +123,29 @@ async def toggle_log(habit_id: int, date: str) -> bool:
             row = await cursor.fetchone()
 
         if row is None:
+            new_done = 1
             await db.execute(
                 "INSERT INTO daily_logs (habit_id, date, done) VALUES (?, ?, 1)",
                 (habit_id, date),
             )
-            new_done = True
         else:
-            new_done = not bool(row[0])
+            current = row[0]
+            new_done = 1 if current == 0 else 2 if current == 1 else 0
             await db.execute(
                 "UPDATE daily_logs SET done = ? WHERE habit_id = ? AND date = ?",
-                (int(new_done), habit_id, date),
+                (new_done, habit_id, date),
             )
         await db.commit()
     return new_done
 
 
-async def get_today_logs(date: str) -> dict[int, bool]:
+async def get_today_logs(date: str) -> dict[int, int]:
     async with aiosqlite.connect(DB_PATH) as db:
         async with db.execute(
             "SELECT habit_id, done FROM daily_logs WHERE date = ?", (date,)
         ) as cursor:
             rows = await cursor.fetchall()
-    return {row[0]: bool(row[1]) for row in rows}
+    return {row[0]: row[1] for row in rows}
 
 
 async def get_logs_range(start: str, end: str) -> list[dict]:

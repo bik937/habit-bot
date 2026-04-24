@@ -19,8 +19,8 @@ async def send_morning_reminder(bot: Bot):
 
     builder = InlineKeyboardBuilder()
     for habit in habits:
-        done = logs.get(habit["id"], False)
-        mark = "✅" if done else "⬜"
+        state = logs.get(habit["id"], 0)
+        mark = {0: "⬜", 1: "✅", 2: "❌"}.get(state, "⬜")
         builder.button(
             text=f"{mark} {habit['name']}",
             callback_data=f"toggle:{habit['id']}:{today}",
@@ -45,8 +45,8 @@ async def send_evening_reminder(bot: Bot):
     today = str(date.today())
     logs = await db.get_today_logs(today)
 
-    done = [h for h in habits if logs.get(h["id"], False)]
-    missed = [h for h in habits if not logs.get(h["id"], False)]
+    done = [h for h in habits if logs.get(h["id"], 0) == 1]
+    missed = [h for h in habits if logs.get(h["id"], 0) != 1]
     pct = round(len(done) / len(habits) * 100)
 
     lines = [
