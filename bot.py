@@ -10,13 +10,14 @@ from config import BOT_TOKEN
 from database import init_db
 from scheduler import setup_scheduler
 from handlers import habits, checkin, stats
+from httpx_session import HttpxSession
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 
-bot = Bot(token=BOT_TOKEN)
+bot = Bot(token=BOT_TOKEN, session=HttpxSession())
 dp = Dispatcher(storage=MemoryStorage())
 
 dp.include_router(habits.router)
